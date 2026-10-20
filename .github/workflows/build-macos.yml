@@ -1,0 +1,52 @@
+name: Build macOS app
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build app
+        run: PYTHON=python zsh build_standalone.sh
+
+      - name: Smoke test (real transcription)
+        run: |
+          pip install av numpy
+          python -c "
+          import numpy as np, av
+          sr = 16000; t = np.arange(sr * 3) / sr
+          x = (0.3 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
+          with av.open('test.wav', 'w') as c:
+              s = c.add_stream('pcm_s16le', rate=sr, layout='mono')
+              f = av.AudioFrame.from_ndarray((x * 32767).astype(np.int16)[None], format='s16', layout='mono')
+              f.sample_rate = sr
+              for p in s.encode(f): c.mux(p)
+              for p in s.encode(None): c.mux(p)
+          "
+          "Armenian Transcription.app/Contents/MacOS/Armenian Transcription" test.wav
+          test -f test.txt && echo "OK: test.txt created"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ArmenianTranscription-macOS-standalone
+          path: ArmenianTranscription-macOS-standalone.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ArmenianTranscription-macOS-standalone.zip
