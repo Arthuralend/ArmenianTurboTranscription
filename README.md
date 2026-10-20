@@ -9,14 +9,15 @@ Whisper Large V3 Turbo, дообученный на армянском (WER 15,3
 
 ## Требования
 
-- Mac на Apple Silicon (M1 и новее), macOS 12+. На Intel тоже запустится, но медленно (на CPU).
-- **~6 ГБ свободного места**: модель 3,2 ГБ + Python и PyTorch ~1,5 ГБ.
-- Интернет при первом запуске.
-- Xcode, Homebrew и ffmpeg **не нужны**.
+- Mac на Apple Silicon (M1 и новее), macOS 12+.
+- **~5 ГБ свободного места**: приложение ~1,5 ГБ + модель 3,2 ГБ.
+- Интернет — только один раз, при первой транскрибации (скачивается модель).
+- Python, Xcode, Homebrew и ffmpeg **не нужны** — всё уже внутри приложения.
 
 ## Установка
 
-1. Скачайте [`ArmenianTranscription-macOS.zip`](ArmenianTranscription-macOS.zip) и распакуйте.
+1. Скачайте `ArmenianTranscription-macOS-standalone.zip` со страницы
+   [**Releases**](https://github.com/Arthuralend/ArmenianTurboTranscription/releases/latest) и распакуйте.
 2. Перенесите **Armenian Transcription.app** в «Программы».
 3. Приложение не подписано, поэтому при первом открытии macOS его заблокирует.
    Откройте **Системные настройки → Конфиденциальность и безопасность** и нажмите **«Всё равно открыть»**.
@@ -24,8 +25,14 @@ Whisper Large V3 Turbo, дообученный на армянском (WER 15,3
    ```bash
    xattr -dr com.apple.quarantine "/Applications/Armenian Transcription.app"
    ```
-4. Первый запуск длится несколько минут: устанавливаются [uv](https://github.com/astral-sh/uv), Python 3.12 и библиотеки.
-   Модель (3,2 ГБ) скачивается при первой транскрибации.
+4. При первой транскрибации скачивается модель (3,2 ГБ), дальше всё работает без интернета.
+
+<details>
+<summary>Лёгкая версия (1 МБ, ставит Python сама)</summary>
+
+[`ArmenianTranscription-macOS.zip`](ArmenianTranscription-macOS.zip) — маленький архив, который при первом запуске
+сам устанавливает [uv](https://github.com/astral-sh/uv), Python 3.12 и библиотеки (~1,5 ГБ, несколько минут).
+</details>
 
 ## Использование
 
@@ -41,11 +48,13 @@ zsh run.command запись.m4a другая.mp3
 
 ## Сборка из исходников
 
-```bash
-zsh build_app.sh
-```
+Автономная версия собирается автоматически в GitHub Actions при создании тега `v*`
+(`.github/workflows/build-macos.yml`). Локально:
 
-Скрипт собирает `Armenian Transcription.app` и zip-архив, используя только штатные утилиты macOS.
+```bash
+zsh build_standalone.sh   # автономное .app (нужен Python 3.12 с python.org)
+zsh build_app.sh          # лёгкая версия
+```
 
 ## Файлы
 
@@ -53,7 +62,8 @@ zsh build_app.sh
 |---|---|
 | `transcribe.py` | программа (окно на Tkinter + режим командной строки) |
 | `run.command` | запуск без сборки .app |
-| `build_app.sh` | сборка .app и zip |
+| `build_standalone.sh` | сборка автономного .app (PyInstaller) |
+| `build_app.sh` | сборка лёгкой версии |
 | `icon.png`, `assets/icon-1024.png` | иконка окна и приложения |
 
 Журнал приложения: `~/Library/Logs/ArmenianTranscription.log`.
