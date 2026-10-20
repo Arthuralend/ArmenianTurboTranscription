@@ -25,20 +25,22 @@ jobs:
 
       - name: Smoke test (real transcription)
         run: |
-          pip install av numpy
           python -c "
-          import numpy as np, av
-          sr = 16000; t = np.arange(sr * 3) / sr
-          x = (0.3 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
-          with av.open('test.wav', 'w') as c:
-              s = c.add_stream('pcm_s16le', rate=sr, layout='mono')
-              f = av.AudioFrame.from_ndarray((x * 32767).astype(np.int16)[None], format='s16', layout='mono')
-              f.sample_rate = sr
-              for p in s.encode(f): c.mux(p)
-              for p in s.encode(None): c.mux(p)
+          import wave, math, struct
+          sr = 16000
+          with wave.open('test.wav', 'wb') as w:
+              w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
+              w.writeframes(b''.join(struct.pack('<h', int(9000 * math.sin(2 * math.pi * 440 * i / sr))) for i in range(sr * 3)))
           "
-          "Armenian Transcription.app/Contents/MacOS/Armenian Transcription" test.wav
-          test -f test.txt && echo "OK: test.txt created"
+          set +e
+          "Armenian Transcription.app/Contents/MacOS/Armenian Transcription" test.wav > smoke.log 2>&1
+          code=$?
+          cat smoke.log
+          if [ $code -ne 0 ] || [ ! -f test.txt ]; then
+            tail -c 3500 smoke.log | python -c "import sys,urllib.parse;print('::error title=Smoke test::'+sys.stdin.read().replace('%','%25').replace('\r','').replace('\n','%0A'))"
+            exit 1
+          fi
+          echo "OK: test.txt created"
 
       - uses: actions/upload-artifact@v4
         with:
