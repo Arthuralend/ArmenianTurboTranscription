@@ -52,17 +52,22 @@ def get_pipeline(status=print):
         import torch
         from transformers import pipeline
 
-        if torch.backends.mps.is_available():
-            device, dtype = "mps", torch.float16
-        else:
-            device, dtype = "cpu", torch.float32
-        status(f"Загрузка модели ({device})… при первом запуске скачивается ~3,2 ГБ")
-        _pipe = pipeline(
-            "automatic-speech-recognition",
-            model=MODEL_ID,
-            torch_dtype=dtype,
-            device=device,
-        )
+        devices = [("cpu", torch.float32)]
+        if torch.backends.mps.is_available() and os.environ.get("TRANSCRIBE_DEVICE") != "cpu":
+            devices.insert(0, ("mps", torch.float16))
+        for device, dtype in devices:
+            status(f"Загрузка модели ({device})… при первом запуске скачивается ~3,2 ГБ")
+            try:
+                _pipe = pipeline(
+                    "automatic-speech-recognition",
+                    model=MODEL_ID,
+                    torch_dtype=dtype,
+                    device=device,
+                )
+                break
+            except RuntimeError:  # GPU (MPS) недоступен — пробуем CPU
+                if device == "cpu":
+                    raise
     return _pipe
 
 
